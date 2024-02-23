@@ -1,5 +1,6 @@
 ﻿using ShopOnline.Models.Dtos;
 using ShopOnline.Web.Services.Contracts;
+using System.Net.Http;
 
 namespace ShopOnline.Web.Services
 {
@@ -12,12 +13,57 @@ namespace ShopOnline.Web.Services
             _httpClient = httpClient;
         }
 
-        public async Task<IEnumerable<ProductDto>> GetItems()
+		public async Task<ProductDto> GetItem(int id)
+		{
+			try
+			{
+				var response = await _httpClient.GetAsync($"api/Product/{id}");
+
+				if (response.IsSuccessStatusCode)
+				{
+					if (response.StatusCode == System.Net.HttpStatusCode.NoContent)
+					{
+						return default(ProductDto);
+					}
+
+					return await response.Content.ReadFromJsonAsync<ProductDto>();
+				}
+				else
+				{
+					var message = await response.Content.ReadAsStringAsync();
+					throw new Exception($"Http status code: {response.StatusCode} message: {message}");
+				}
+			}
+			catch (Exception)
+			{
+				//Log exception
+				throw;
+			}
+		}
+
+		public async Task<IEnumerable<ProductDto>> GetItems()
         {
             try
             {
-                var products = await _httpClient.GetFromJsonAsync<IEnumerable<ProductDto>>("api/Product");
-                return products;
+                //var products = await _httpClient.GetFromJsonAsync<IEnumerable<ProductDto>>("api/Product");
+                //return products;
+
+                var response = await _httpClient.GetAsync("api/Product");
+
+                if(response.IsSuccessStatusCode)
+                {
+                    if(response.StatusCode == System.Net.HttpStatusCode.NoContent)
+                    {
+                        return Enumerable.Empty<ProductDto>();
+                    }
+
+                    return await response.Content.ReadFromJsonAsync<IEnumerable<ProductDto>>();
+                }
+                else
+                {
+                    var message = await response.Content.ReadAsStringAsync();
+                    throw new Exception(message);
+                }
             }
             catch (Exception)
             {
