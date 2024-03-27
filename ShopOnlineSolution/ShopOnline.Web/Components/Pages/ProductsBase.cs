@@ -11,28 +11,36 @@ namespace ShopOnline.Web.Components.Pages
 
 		[Inject]
 		public IShoppingCartService ShoppingCartService { get; set; }
+        
+        [Inject]
+        public IManageProductsLocalStorageService ManageProductsLocalStorageService { get; set; }
+
+		[Inject]
+		public IManageCartItemsLocalStorageService ManageCartItemsLocalStorageService { get; set; }
 
 		public IEnumerable<ProductDto> Products { get; set;}
 
-        protected override async Task OnInitializedAsync()
-        {
-            try
-            {
-                Products = await ProductService.GetItems();
+		protected override async Task OnInitializedAsync()
+		{
+			try
+			{
+				await ClearLocalStorage();
 
-                var shoppingCartItems = await ShoppingCartService.GetItems(HardCoded.UserId);
-                var totalQty = shoppingCartItems.Sum(i => i.Qty);
+				Products = await ManageProductsLocalStorageService.GetCollection();
 
-                ShoppingCartService.RaiseEventOnShoppingCartChanged(totalQty);
-            }
-            catch (Exception ex)
-            {
+				var shoppingCartItems = await ManageCartItemsLocalStorageService.GetCollection();
 
-                throw;
-            }
-        }
+				var totalQty = shoppingCartItems.Sum(i => i.Qty);
 
-        protected IOrderedEnumerable<IGrouping<int, ProductDto>> GetGroupedByCategory()
+				ShoppingCartService.RaiseEventOnShoppingCartChanged(totalQty);
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine(ex.Message);
+			}
+		}
+
+		protected IOrderedEnumerable<IGrouping<int, ProductDto>> GetGroupedByCategory()
         {
             return from product in Products
 				   group product by product.CategoryId into prodByCatGroup
@@ -43,6 +51,12 @@ namespace ShopOnline.Web.Components.Pages
         protected string GetCategoryName(IGrouping<int,ProductDto> groupedProductDtos)
         {
             return groupedProductDtos.FirstOrDefault(pg => pg.CategoryId == groupedProductDtos.Key).CategoryName;
+        }
+
+        private async Task ClearLocalStorage()
+        {
+            await ManageProductsLocalStorageService.RemoveCollection();
+            await ManageCartItemsLocalStorageService.RemoveCollection();
         }
     }
 }
